@@ -32,28 +32,34 @@ def send_mail(recipient_email, subject, message, server='smtp.gmail.com',
 
     print(f"Email sent to: {recipient_email}")
 
-subject = "Quote for Shipping ~45 lbs., Golden Dooble to London, UK"
+subject = "Quote for Shipping Shepherd to London, UK"
 body_message = """\
 Hello,
 
-I will be relocating to London, UK in the next two months and would like to bring my 3 years old Rocky the Golden Doodle with me. Given his weight of 45 lbs, I understand that he would need to travel via cargo. He is fully vaccinated and has a microchip, and I’ve reviewed the health certificate requirements. Could you please provide me with a quote for shipping him from {airport} to London?
+I will be relocating to London, UK in September and would like to bring my 3 years old Rocky the German Shepherd with me. Given his weight of ~90 lbs., and 30 inches height, I understand that he would need to travel via cargo. He is fully vaccinated and has a microchip, and I’ve reviewed the health certificate requirements. Could you please provide me with a quote for shipping him from {airport} to London? I would like to drop him off and pick him up at the airports, and I would prefer to be on the same flight if possible, as I have not purchased my ticket yet. 
 
 In addition to the quote, I would appreciate it if you could provide the following details:
 
-    Estimated duration of the shipment
-    Breakdown of the total cost and what it includes
-    Whether there is an option for insurance and what it covers
-    Any additional fees or charges that may apply
+    Estimated duration of the shipment if he can't flight with me.
+    Flight options if I want to be in the same flight with him.
+    Whether there is an option for insurance and what it covers and its cost.
+    The total cost and what it includes, any additional fees or charges that may apply.
     
-Thank you,
-
+    
+Thank you in advance,
+Tran
 """
+
+
 
 for index, row in df.iterrows():
     recipient_email = row['Email']
     airport = row['PrimaryAirport']
+    business = row['Company']
 
-    body = body_message.format(airport=airport)
-
-    send_mail([recipient_email], subject, body,
-              from_email=sender_email, password=sender_pw)
+    if recipient_email and "@" in recipient_email:
+        body = body_message.format(airport=airport)
+        send_mail([recipient_email], subject, body,
+          from_email=sender_email, password=sender_pw)
+    else:
+        print(f"Skipped sending email to: {business}")
