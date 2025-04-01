@@ -3,7 +3,7 @@ from google.oauth2 import service_account
 from google.cloud import bigquery
 
 # Service account key file
-key_file = 'spat-455404-49dc6376255b.json'
+key_file = 'spat-455404-8aa716b59add.json'
 scopes = ["https://www.googleapis.com/auth/cloud-platform",
           "https://www.googleapis.com/auth/drive"]
 credentials = service_account.Credentials.from_service_account_file(key_file, scopes=scopes)
