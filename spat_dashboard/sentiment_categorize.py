@@ -1,25 +1,22 @@
 import pandas as pd
 from textblob import TextBlob
-import streamlit as st
+from app import GoogleReview_df
 
 # ----------------------------
 # 1. Data Loading and Preprocessing
 # ----------------------------
 
 # Load the dataset
-file_path = "google.xlsx"  # Update this with your file path
-df = pd.read_excel(file_path)
+#file_path = "google.xlsx"  # Update this with your file path
+#df = pd.read_excel(file_path)
+df = GoogleReview_df
 
-# Set the column names (adjust if necessary)
+# Set the column names
 review_column = "Review"
-company_column = "Name"  # Assuming this column contains company names
+company_column = "Name"
 
 # Drop reviews missing either review text or company name
 reviews = df[[review_column, company_column, "Rating"]].dropna()
-
-# ----------------------------
-# 2. Define Categories and Analysis Functions
-# ----------------------------
 
 # Define categories and their associated keywords.
 categories = {
@@ -30,7 +27,6 @@ categories = {
     "Safety and Care": ["safe", "care", "well-being", "condition"],
     "Reputation": ["reliable", "recommend", "trustworthy", "professional", "reputation"],
 }
-
 
 # Function to analyze sentiment using TextBlob
 def analyze_sentiment(review):
@@ -47,10 +43,6 @@ def categorize_review(review):
             review_categories.append(category)
     return review_categories
 
-
-# ----------------------------
-# 3. Analyze Each Review and Create Detailed Output
-# ----------------------------
 
 # Apply sentiment analysis and category categorization to each review
 reviews["Sentiment"] = reviews[review_column].apply(analyze_sentiment)
@@ -70,10 +62,6 @@ def create_detailed_review_summary(df):
 
 
 detailed_review_summary = create_detailed_review_summary(reviews)
-
-# ----------------------------
-# 4. Create a Company-Level Summary (Counts per Category)
-# ----------------------------
 
 # For each company, count the number of positive and negative reviews per category.
 summary = {}

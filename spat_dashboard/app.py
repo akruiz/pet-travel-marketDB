@@ -1,4 +1,3 @@
-import pandas as pd
 import plotly.express as px
 from textblob import TextBlob
 from collections import Counter
@@ -8,6 +7,32 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import re
+import pandas as pd
+from google.oauth2 import service_account
+from google.cloud import bigquery
+
+# Service account key file
+key_file = 'spat-455404-8aa716b59add.json'  # Update the JSON file name here
+scopes = ["https://www.googleapis.com/auth/cloud-platform",
+          "https://www.googleapis.com/auth/drive"]
+credentials = service_account.Credentials.from_service_account_file(key_file, scopes=scopes)
+
+client = bigquery.Client(credentials=credentials, project="spat-455404")
+project_id = "spat-455404"
+dataset_id = "SPAT"
+tables = ["BBB", "GoogleReview", "IPATA", "Map_Pricing"]
+
+# Fetch data
+df_dict = {}
+for table in tables:
+    query = f"SELECT * FROM `{project_id}.{dataset_id}.{table}`"
+    df1 = client.query(query).to_dataframe()
+    df_dict[table] = df1.iloc[1:]  # Skip the first row because it's duplicated in the Google Sheet
+
+BBB_df = df_dict.get("BBB", pd.DataFrame())
+GoogleReview_df = df_dict.get("GoogleReview", pd.DataFrame())
+IPATA_df = df_dict.get("IPATA", pd.DataFrame())
+MapPricing_df = df_dict.get("Map_Pricing", pd.DataFrame())
 
 
 # =============================================================================
@@ -84,34 +109,14 @@ def extract_animal_services(full_text):
             found_animals.add(animal)
     return list(found_animals) if found_animals else "No specific animal services mentioned."
 
-
-def extract_memberships_or_tiers(full_text):
-    """
-    Identifies sentences mentioning memberships or service tiers.
-    """
-    membership_keywords = ['membership', 'tier', 'plan', 'subscription']
-    membership_sentences = []
-    sentences = full_text.split('.')
-    for sentence in sentences:
-        for mk in membership_keywords:
-            if mk in sentence.lower():
-                cleaned = sentence.strip()
-                if len(cleaned) > 10 and cleaned not in membership_sentences:
-                    membership_sentences.append(cleaned)
-                break
-    return membership_sentences if membership_sentences else "No membership or service tier information detected."
-
-
 def extract_pricing_info(full_text):
     """
     Searches for pricing information in the text by checking each sentence.
-    It returns sentences that either mention a dollar amount
-    or include pricing-related keywords/phrases.
     """
     pricing_keywords = [
         "price", "cost", "payment", "pay", "charge", "pricing", "expensive",
         "affordable", "flexible", "varies", "custom quote", "by appointment",
-        "contact for pricing", "get a quote"
+        "contact for pricing", "get a quote", "quote"
     ]
 
     # Regular expression for common dollar amount patterns
@@ -212,8 +217,6 @@ def gather_competitor_insights(url):
     insights["years_in_business"] = extract_years_in_business(full_text)
     # -- Extract Animal Services
     insights["animal_services"] = extract_animal_services(full_text)
-    # -- Extract Memberships or Service Tiers
-    insights["membership_or_tiers"] = extract_memberships_or_tiers(full_text)
     # -- Extract Pricing Information
     insights["pricing_info"] = extract_pricing_info(full_text)
     # -- New Extraction: Website Stack
@@ -229,85 +232,20 @@ def gather_competitor_insights(url):
 # Two-sentence overview for the tool
 st.title("SMART Pet Air Travel Competitive Marketing Dashboard")
 st.write(
-    "This dashboard provides key insights into competitor websites, as well as a geographic distribution of companies based on BBB data. "
-    "Additionally, it offers sentiment and review analysis from Google Maps to help you compare strengths, weaknesses, and customer feedback trends."
+    ""
 )
 
-# ---------------------------
-# Competitor Website Analysis Section
-# ---------------------------
-st.header("Competitor Website Analysis")
-st.write(
-    "Enter a competitor's website URL below to extract important business and SEO information, including service details, pricing, and website stack.")
-
-with st.container():
-    url = st.text_input("Enter Competitor's Website URL:")
-    if st.button("Gather Insights"):
-        if url:
-            st.info("Analyzing the website...")
-            result = gather_competitor_insights(url)
-            if "error" in result:
-                st.error(result["error"])
-            else:
-                st.subheader("Website Description")
-                st.write(result["description"])
-
-                st.subheader("Services and Products Overview")
-                for idx, info in enumerate(result["services_and_products"], start=1):
-                    st.write(f"**{idx}.** {info}")
-
-                st.subheader("SEO Score")
-                st.write(f"Estimated SEO Score: **{result['seo_score']} / 100**")
-
-                st.subheader("Years in Business")
-                st.write(result["years_in_business"])
-
-                st.subheader("Animal Services")
-                animal_data = result["animal_services"]
-                if isinstance(animal_data, list):
-                    for animal in animal_data:
-                        st.write(f"- {animal.capitalize()}")
-                else:
-                    st.write(animal_data)
-
-                st.subheader("Memberships / Service Tiers")
-                membership_data = result["membership_or_tiers"]
-                if isinstance(membership_data, list):
-                    for idx, sentence in enumerate(membership_data, start=1):
-                        st.write(f"**{idx}.** {sentence}")
-                else:
-                    st.write(membership_data)
-
-                st.subheader("Pricing Information")
-                pricing_info = result["pricing_info"]
-                if isinstance(pricing_info, list):
-                    st.write(", ".join(pricing_info))
-                else:
-                    st.write(pricing_info)
-
-                st.subheader("Website Stack")
-                tech_stack = result["tech_stack"]
-                if isinstance(tech_stack, list):
-                    st.write(", ".join(tech_stack))
-                else:
-                    st.write(tech_stack)
-        else:
-            st.error("Please enter a valid URL.")
-
-st.markdown("<hr>", unsafe_allow_html=True)
 
 # ---------------------------
 # BBB Data Analysis & Visualizations Section
 # ---------------------------
-st.header("BBB Data Analysis & Visualizations")
-st.write(
-    "This section displays competitor data from BBB, including a geographic map and top services analysis to help you understand market distribution.")
-
 
 @st.cache_data
 def load_bbb_data():
-    pet_bbb = pd.read_csv('BBB_Clean_Octoparse.csv', encoding='latin1')
-    pet_bbb.columns = ['Company_Name', 'Company_Address', 'BBB_Rating', 'Phone',
+    # commented if you want to run locally uncomment and comment df pull
+    #pet_bbb = pd.read_csv('BBB_Clean_Octoparse.csv', encoding='latin1')
+    pet_bbb = BBB_df
+    pet_bbb.columns = ['Company', 'Address', 'BBBRating', 'Phone',
                        'BusinessStarted', 'NumberEmployees', 'BusinessCategories']
     return pet_bbb
 
@@ -324,7 +262,7 @@ def parse_address(address):
 
 
 def process_bbb_data(bbb_df):
-    bbb_df[['City', 'State', 'Postal_code']] = bbb_df['Company_Address'].apply(
+    bbb_df[['City', 'State', 'Postal_code']] = bbb_df['Address'].apply(
         lambda x: pd.Series(parse_address(x))
     )
     bbb_df['BusinessCategories'] = bbb_df['BusinessCategories'].apply(
@@ -343,26 +281,31 @@ def load_us_states():
     return pd.read_csv('US_States.csv')
 
 
+# Merge US states data (which should include center coordinates for each state) with your pet companies data
 us_states = load_us_states()
 pet_bbb = pd.merge(pet_bbb, us_states, on='State', how='left')
 
-# Company selection and improved map visualization
-unique_companies = tuple(pet_bbb['Company_Name'].unique().tolist())
-selected_company = st.selectbox('Select the name of a pet company', unique_companies)
-st.write('You selected:', selected_company)
+# Aggregate data by state: count companies and create a list of unique company names.
+state_agg = pet_bbb.groupby('State').agg(
+    count=('Company', 'nunique'),
+    companies=('Company', lambda x: ", ".join(sorted(x.unique()))),
+    LAT=('LAT', 'mean'),
+    LON=('LON', 'mean')
+).reset_index()
 
 
 def usmap_distribution():
-    st.subheader("Distribution of Competitors Across the US")
-    # Improved map: Increase marker size and set a consistent color theme
+    # Create a scatter_geo plot with marker size based on company count.
     fig = px.scatter_geo(
-        pet_bbb,
-        lat="LAT", lon="LON",
-        hover_name="Company_Name",
-        hover_data=['BBB_Rating', 'NumberEmployees'],
+        state_agg,
+        lat="LAT",
+        lon="LON",
+        hover_name="State",
+        hover_data={"count": True, "companies": True},
         scope="usa",
-        size_max=15,
-        title="Competitor Distribution on the US Map"
+        size="count",
+        size_max=50,
+        title="Distribution of Pet Shipping Companies by State"
     )
     st.plotly_chart(fig)
 
@@ -371,7 +314,7 @@ usmap_distribution()
 
 pet_rows = pet_bbb.explode('BusinessCategories')
 pet_rows['BusinessCategories'] = pet_rows['BusinessCategories'].apply(lambda x: x.strip() if pd.notnull(x) else None)
-df_top_services = pet_rows.groupby('BusinessCategories')['Company_Name'].nunique().sort_values(
+df_top_services = pet_rows.groupby('BusinessCategories')['Company'].nunique().sort_values(
     ascending=False).reset_index().head(10)
 df_top_services.columns = ['Services', 'Number_of_companies']
 
@@ -390,15 +333,111 @@ def top_services(df_top_services):
 top_services(df_top_services)
 
 st.markdown("<hr>", unsafe_allow_html=True)
+# ---------------------------
+# Competitor Website Analysis Section
+# ---------------------------
+st.header("Competitor Website Analysis")
+st.write(
+    "Select a competitor from the list below to extract important business and SEO information, including service details, pricing (if applicable), and website stack. "
+    "Alternatively, you can enter a URL manually."
+)
+
+# Merge IPATA and MapPricing data on 'Company' (adjust column names as needed).
+if not IPATA_df.empty:
+    ipata_pricing = pd.merge(IPATA_df, MapPricing_df, on='Company', how='left')
+    # Build a mapping from a key (Company and Website) to the pricing info.
+    competitor_price_mapping = {}
+    ipata_options = []
+    for _, row in ipata_pricing.iterrows():
+        if pd.notnull(row['Website']):
+            key = f"{row['Company']} ({row['Website']})"
+            # Only add an indicator to the dropdown if pricing is available
+            display_key = key + (" - Price Available" if pd.notnull(row.get('Pricing')) else "")
+            ipata_options.append(display_key)
+            competitor_price_mapping[key] = row.get('Pricing', 'NA')
+    # Add an option for manual URL entry.
+    ipata_options.append("Other (Enter URL manually)")
+else:
+    ipata_options = ["Other (Enter URL manually)"]
+
+# Create a selectbox for competitor selection.
+selected_option = st.selectbox("Select a Competitor:", options=ipata_options)
+
+# Determine the URL based on the user's selection.
+if selected_option.startswith("Other"):
+    url = st.text_input("Enter Competitor's Website URL:")
+    selected_company_key = None
+else:
+    # Remove any trailing indicator text (e.g., " - Price Available") to extract the key.
+    selected_company_key = selected_option.split(" - ")[0]
+    # Extract the URL from the key (it's inside parentheses).
+    match = re.search(r'\((https?://[^\)]+)\)', selected_company_key)
+    if match:
+        url = match.group(1)
+    else:
+        url = None
+
+if st.button("Gather Insights"):
+    if url:
+        st.info("Analyzing the website...")
+        result = gather_competitor_insights(url)
+        if "error" in result:
+            st.error(result["error"])
+        else:
+            st.subheader("Website Description")
+            st.write(result["description"])
+
+            st.subheader("Services and Products Overview")
+            for idx, info in enumerate(result["services_and_products"], start=1):
+                st.write(f"**{idx}.** {info}")
+
+            st.subheader("SEO Score")
+            st.write(f"Estimated SEO score was calculated calculated by assigning points for the presence and quality"
+                     f" of on-page elements like title tags, meta descriptions, H1 tags, image ALT attributes, and canonical links:\n **{result['seo_score']} / 100**")
+
+            st.subheader("Years in Business")
+            st.write(result["years_in_business"])
+
+            st.subheader("Animal Services")
+            animal_data = result["animal_services"]
+            if isinstance(animal_data, list):
+                for animal in animal_data:
+                    st.write(f"- {animal.capitalize()}")
+            else:
+                st.write(animal_data)
+
+
+            st.subheader("Pricing Information")
+            # If a competitor was selected from the dropdown (not manual entry), retrieve pricing from the mapping.
+            if selected_company_key and selected_company_key in competitor_price_mapping:
+                pricing_value = competitor_price_mapping[selected_company_key]
+                st.write(f"Estimdated quote from our database, which indicated that a 90‑lb, 30‑inch German Shepherd "
+                         f"would be shipped from  NYC to London, UK via cargo"
+                         f",: **{pricing_value if pd.notnull(pricing_value) else 'NA'}**")
+            else:
+                st.write("Pricing: **NA**")
+
+            st.subheader("Website Stack")
+            tech_stack = result["tech_stack"]
+            if isinstance(tech_stack, list):
+                st.write(", ".join(tech_stack))
+            else:
+                st.write(tech_stack)
+    else:
+        st.error("Please enter a valid URL.")
+
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ---------------------------
 # Company Sentiment & Reviews Analysis Section
 # ---------------------------
-st.header("Company Sentiment & Reviews Analysis")
+st.header("Sentiment & Reviews Analysis")
 st.write("Select one or more companies to view sentiment analysis of Google Reviews. "
-         "This section of the app analyzes Google Reviews and company data to provide insights "
-         "into customer sentiment, strengths and weaknesses, review trends, and correlations between "
-         "ratings and key categories like customer service and pricing.")
+         "View sentiment analysis of Google Reviews to gain insights into customer feedback,"
+         " strengths, weaknesses, review trends, and correlations between ratings and key factors"
+         " like customer service and pricing.")
 
 
 @st.cache_data
@@ -409,20 +448,107 @@ def load_company_data(file_path):
     return df, strengths, weaknesses
 
 
-@st.cache_data
-def load_google_reviews(file_path):
-    google_reviews = pd.read_excel(file_path)
-    google_reviews['Rating'] = pd.to_numeric(
-        google_reviews['Rating']
-        .str.replace(" stars", "", regex=False)
-        .str.strip(),
-        errors='coerce'
-    )
-    return google_reviews.dropna(subset=['Rating'])
+google_reviews = GoogleReview_df.copy()
+#google_reviews = pd.read_excel("google_reviews.xlsx")
+
+# Clean the "Rating" column for both cloud and local sources
+google_reviews['Rating'] = pd.to_numeric(
+    google_reviews['Rating']
+    .str.replace(" stars", "", regex=False)
+    .str.strip(),
+    errors='coerce'
+)
+
+# Drop rows with missing ratings
+google_reviews = google_reviews.dropna(subset=['Rating'])
+
+# Set the column names
+review_column = "Review"
+company_column = "Name"
+
+# Drop reviews missing either review text or company name
+reviews = google_reviews[[review_column, company_column, "Rating"]].dropna()
+
+# Define categories and their associated keywords.
+categories = {
+    "Customer Service": ["responsive", "helpful", "supportive", "service", "team"],
+    "Pricing": ["affordable", "expensive", "cost", "pricing", "value"],
+    "Communication": ["updates", "informative", "contact", "communicative"],
+    "Ease of Process": ["easy", "smooth", "process", "hassle-free", "booking"],
+    "Safety and Care": ["safe", "care", "well-being", "condition"],
+    "Reputation": ["reliable", "recommend", "trustworthy", "professional", "reputation"],
+}
 
 
-df, strengths, weaknesses = load_company_data("company_summary.xlsx")
-google_reviews = load_google_reviews("google.xlsx")
+# Function to analyze sentiment using TextBlob
+def analyze_sentiment(review):
+    blob = TextBlob(review)
+    sentiment_score = blob.sentiment.polarity  # Polarity: -1 (negative) to +1 (positive)
+    return "Positive" if sentiment_score > 0 else "Negative"
+
+
+# Function to categorize a review: returns a list of categories whose keywords appear in the review
+def categorize_review(review):
+    review_categories = []
+    for category, keywords in categories.items():
+        if any(keyword in review.lower() for keyword in keywords):
+            review_categories.append(category)
+    return review_categories
+
+
+# Apply sentiment analysis and category categorization to each review
+reviews["Sentiment"] = reviews[review_column].apply(analyze_sentiment)
+reviews["Categories"] = reviews[review_column].apply(categorize_review)
+
+
+# Create a detailed review-level summary:
+# For each review, if the sentiment is "Positive", record its categories as strengths;
+# if "Negative", record as weaknesses.
+def create_detailed_review_summary(df):
+    df = df.copy()
+    df["Detailed_Strengths"] = df.apply(lambda row: row["Categories"] if row["Sentiment"] == "Positive" else None,
+                                        axis=1)
+    df["Detailed_Weaknesses"] = df.apply(lambda row: row["Categories"] if row["Sentiment"] == "Negative" else None,
+                                         axis=1)
+    return df
+
+
+detailed_review_summary = create_detailed_review_summary(reviews)
+
+# For each company, count the number of positive and negative reviews per category.
+summary = {}
+for company in reviews[company_column].unique():
+    company_reviews = reviews[reviews[company_column] == company]
+    strengths_count = {cat: 0 for cat in categories.keys()}
+    weaknesses_count = {cat: 0 for cat in categories.keys()}
+
+    # Process each review for the current company
+    for _, row in company_reviews.iterrows():
+        for cat in row["Categories"]:
+            if row["Sentiment"] == "Positive":
+                strengths_count[cat] += 1
+            elif row["Sentiment"] == "Negative":
+                weaknesses_count[cat] += 1
+
+    # Only include categories that had some reviews so the dict isn't all zeros
+    summary[company] = {
+        "Strengths": {cat: count for cat, count in strengths_count.items() if count > 0},
+        "Weaknesses": {cat: count for cat, count in weaknesses_count.items() if count > 0},
+    }
+
+# Save company-level summary to an Excel file
+output_file_path = "company_summary.xlsx"
+summary_df = pd.DataFrame([
+    {
+        "Company": company,
+        "Strengths": details["Strengths"],
+        "Weaknesses": details["Weaknesses"],
+    }
+    for company, details in summary.items()
+])
+summary_df.to_excel(output_file_path, index=False)
+
+reviews, strengths, weaknesses = load_company_data("company_summary.xlsx")
 
 
 def prepare_viz_data(df, strengths, weaknesses, categories):
@@ -440,7 +566,7 @@ def prepare_viz_data(df, strengths, weaknesses, categories):
 
 categories_list = ["Customer Service", "Pricing", "Communication",
                    "Ease of Process", "Safety and Care", "Reputation"]
-viz_df = prepare_viz_data(df, strengths, weaknesses, categories_list)
+viz_df = prepare_viz_data(reviews, strengths, weaknesses, categories_list)
 
 
 def plot_comparison(viz_df, selected_companies):
@@ -522,10 +648,17 @@ def create_company_review_summary(google_reviews):
         summary_str = ", ".join([f"{cat} ({cnt})" for cat, cnt in
                                  cat_counter.most_common()]) if cat_counter else "No categories identified."
         summary_data.append({"Company": company, "Review Summary": summary_str})
+
+    # Calculate total score by summing up all attributes
+    summary_data["Total Score"] = summary_data.sum(axis=1)
+
+    # Sort by Total Score in descending order
+    summary_data = summary_data.sort_values("Total Score", ascending=False)
+
     return pd.DataFrame(summary_data)
 
 
-all_companies = list(viz_df["Company"].unique()) + list(google_reviews["Name"].unique())
+all_companies = list(google_reviews["Name"].unique())
 selected_companies = st.multiselect("Choose one or more companies to visualize:",
                                     options=set(all_companies),
                                     default=None)
@@ -587,7 +720,7 @@ if selected_companies:
     plot_comparison(viz_df, selected_companies)
 
     review_summary_df = create_company_review_summary(google_reviews)
-    st.subheader("Review Sentiment Summary for All Competitors")
+    st.subheader("Positive Review Sentiment Summary for All Competitors")
     st.dataframe(review_summary_df)
 
     # Detailed review sentiment analysis and correlation
