@@ -11,14 +11,12 @@ import pandas as pd
 from google.oauth2 import service_account
 from google.cloud import bigquery
 
-# Service account key file
-key_file = 'spat-455404-8aa716b59add.json'  # Update the JSON file name here
-scopes = ["https://www.googleapis.com/auth/cloud-platform",
-          "https://www.googleapis.com/auth/drive"]
-credentials = service_account.Credentials.from_service_account_file(key_file, scopes=scopes)
+# Load credentials from Streamlit secrets
+credentials_info = st.secrets["google_cloud"]
+credentials = service_account.Credentials.from_service_account_info(credentials_info)
 
-client = bigquery.Client(credentials=credentials, project="spat-455404")
-project_id = "spat-455404"
+# Initialize BigQuery client
+client = bigquery.Client(credentials=credentials, project=credentials_info["project_id"])
 dataset_id = "SPAT"
 tables = ["BBB", "GoogleReview", "IPATA", "Map_Pricing"]
 
