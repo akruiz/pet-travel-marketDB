@@ -18,6 +18,7 @@ credentials = service_account.Credentials.from_service_account_info(credentials_
 # Initialize BigQuery client
 client = bigquery.Client(credentials=credentials, project=credentials_info["project_id"])
 dataset_id = "SPAT"
+project_id = "spat-455404"
 tables = ["BBB", "GoogleReview", "IPATA", "Map_Pricing"]
 
 # Fetch data
