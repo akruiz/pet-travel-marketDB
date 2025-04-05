@@ -13,7 +13,8 @@ from google.cloud import bigquery
 
 # Load credentials from Streamlit secrets
 credentials_info = st.secrets["google_cloud"]
-credentials = service_account.Credentials.from_service_account_info(credentials_info)
+scopes = ['https://www.googleapis.com/auth/bigquery', 'https://www.googleapis.com/auth/drive.readonly'] 
+credentials = service_account.Credentials.from_service_account_info(credentials_info, scopes=scopes)
 
 # Initialize BigQuery client
 client = bigquery.Client(credentials=credentials, project=credentials_info["project_id"])
