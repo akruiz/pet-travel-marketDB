@@ -10,3 +10,4 @@ beautifulsoup4>=4.11.0
 google-auth>=2.6.6
 google-cloud-bigquery>=3.0.0
 db-dtypes
+openpyxl
