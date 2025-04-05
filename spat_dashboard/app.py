@@ -637,23 +637,26 @@ def create_detailed_review_summary(df):
 
 def create_company_review_summary(google_reviews):
     google_reviews["Review"] = google_reviews["Review"].astype(str)
+
     if "Categories" not in google_reviews.columns:
         google_reviews["Categories"] = google_reviews["Review"].apply(categorize_review)
+
     summary_data = []
+
     for company, group in google_reviews.groupby("Name"):
         all_cats = []
         for cats in group["Categories"]:
             all_cats.extend(cats)
+
         cat_counter = Counter(all_cats)
-        summary_str = ", ".join([f"{cat} ({cnt})" for cat, cnt in
-                                 cat_counter.most_common()]) if cat_counter else "No categories identified."
-        summary_data.append({"Company": company, "Review Summary": summary_str})
+        summary_str = ", ".join([f"{cat} ({cnt})" for cat, cnt in cat_counter.most_common()]) if cat_counter else "No categories identified."
+        total_score = sum(cat_counter.values())  # Total number of category tags
 
-    # Calculate total score by summing up all attributes
-    summary_data["Total Score"] = summary_data.sum(axis=1)
-
-    # Sort by Total Score in descending order
-    summary_data = summary_data.sort_values("Total Score", ascending=False)
+        summary_data.append({
+            "Company": company,
+            "Review Summary": summary_str,
+            "Total Score": total_score
+        })
 
     return pd.DataFrame(summary_data)
 
