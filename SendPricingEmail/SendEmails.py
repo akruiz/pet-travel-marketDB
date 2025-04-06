@@ -4,10 +4,10 @@ from email.mime.text import MIMEText
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 
-# New gmail created with 2FA: t.nguyen070196@gmail.com
+# New gmail created with 2FA: spat.gt0425@gmail.com
 # App password:   sywg ndvs lzew ecet
-sender_email = 't.nguyen070196@gmail.com'
-sender_pw = 'sywg ndvs lzew ecet'
+sender_email = 'spat.gt0425@gmail.com'
+sender_pw = 'nrpd agse cdny vioh'
 
 # Recipients
 df_excel = pd.read_excel("Emails Test.xlsx", engine="openpyxl")
