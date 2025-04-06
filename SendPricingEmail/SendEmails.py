@@ -10,7 +10,7 @@ sender_email = 'spat.gt0425@gmail.com'
 sender_pw = 'nrpd agse cdny vioh'
 
 # Recipients
-df_excel = pd.read_excel("Emails Test.xlsx", engine="openpyxl")
+df_excel = pd.read_excel("Emails Test.xlsx", engine="openpyxl") # Replace with the IPATA - Clean Octoparse.xlsx to send email to the actual businesses.
 df = df_excel[['Company', 'CityState', 'Email', 'PrimaryAirport', 'SecondaryAirport']]
 df.loc[:, 'Email'] = df['Email'].fillna('')
 
