@@ -1,4 +1,4 @@
-import plotly.express as px
+fimport plotly.express as px
 from textblob import TextBlob
 from collections import Counter
 from datetime import datetime
@@ -230,7 +230,7 @@ def gather_competitor_insights(url):
 # =============================================================================
 
 # Two-sentence overview for the tool
-st.title("SMART Pet Air Travel Competitive Marketing Dashboard")
+st.title("SMART Pet Air Travel Competitive Market Dashboard")
 st.write(
     ""
 )
@@ -411,7 +411,7 @@ if st.button("Gather Insights"):
             # If a competitor was selected from the dropdown (not manual entry), retrieve pricing from the mapping.
             if selected_company_key and selected_company_key in competitor_price_mapping:
                 pricing_value = competitor_price_mapping[selected_company_key]
-                st.write(f"Estimdated quote from our database, which indicated that a 90‑lb, 30‑inch German Shepherd "
+                st.write(f"Estimated quote from our database, which indicated that a 90‑lb, 30‑inch German Shepherd "
                          f"would be shipped from  NYC to London, UK via cargo"
                          f",: **{pricing_value if pd.notnull(pricing_value) else 'NA'}**")
             else:
